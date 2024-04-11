@@ -17,6 +17,8 @@ public enum ZipError: Error {
     case unzipFail
     /// Zip fail
     case zipFail
+    /// Cancel
+    case zipCancle
     
     /// User readable description
     public var description: String {
@@ -291,7 +293,7 @@ public class Zip {
      
      - notes: Supports implicit progress composition
      */
-    public class func zipFiles(paths: [URL], zipFilePath: URL, password: String?, compression: ZipCompression = .DefaultCompression, progress: ((_ progress: Double) -> ())?) throws {
+    public class func zipFiles(paths: [URL], zipFilePath: URL, password: String?, compression: ZipCompression = .DefaultCompression, progress: ((_ progress: Double) -> ())?, cancel: () -> Bool = { false }) throws {
         
         // File manager
         let fileManager = FileManager.default
@@ -371,6 +373,12 @@ public class Zip {
                 while (feof(input) == 0) {
                     length = fread(buffer, 1, chunkSize, input)
                     zipWriteInFileInZip(zip, buffer, UInt32(length))
+                    
+                    if (cancel()) {
+                        // TODO: Delete file
+                        free(buffer)
+                        throw ZipError.zipCancle
+                    }
                 }
                 
                 // Update progress handler, only if progress is not 1, because
